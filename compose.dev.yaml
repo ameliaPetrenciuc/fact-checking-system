@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+
+    container_name: fact-check-backend
+
+    ports:
+      - "8080:8080"
+
+    env_file:
+      - .env.docker
+
+    volumes:
+      - ./:/app
+
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "server.api:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+        "--reload"
+      ]
+
+    depends_on:
+      ml-server:
+        condition: service_healthy
+
+      neo4j:
+        condition: service_healthy
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs', timeout=5)"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 2m
+
+    restart: unless-stopped
